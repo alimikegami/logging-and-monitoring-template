@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  promtail:
+    image: grafana/promtail
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log
+      - ./promtail:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - monitoring
+  loki:
+    image: grafana/loki
+    container_name: loki
+    volumes:
+      - ./loki:/etc/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring
+  grafana:
+    image: grafana/grafana
+    user: "501" 
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    networks:
+      - monitoring
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - ./prometheus:/prometheus
+    command: 
+      - "--config.file=/prometheus/prometheus.yml"
+  node_exporter:
+    image: quay.io/prometheus/node-exporter
+    container_name: node_exporter
+    command: "--path.rootfs=/host"
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - /:/host:ro
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.1
+    platform: linux/aarch64 # m1/m2 mac
+    container_name: cadvisor
+    # network_mode: host
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+networks:
+  monitoring:
